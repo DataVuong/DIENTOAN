@@ -40,9 +40,9 @@ cd DIENTOAN
   MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
   ```
 
- -Tạo file `fỉebase-auth.json`
+ -Tạo file `firebase-auth.json`
 
- -Đảm bảo file  `fỉebase-auth.json` đã có thông tin kết nối Fire Base.
+ -Đảm bảo file  `firebase-auth.json` đã có thông tin kết nối Fire Base.
  
   
 ### 3. Chạy hệ thống
