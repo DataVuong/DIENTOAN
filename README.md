@@ -29,7 +29,6 @@ Hệ thống Phân Tích Cảm Xúc Ẩm Thực là một ứng dụng web cho p
 
 ```sh
 git clone https://github.com/DataVuong/DIENTOAN.git
-cd DIENTOAN
 ```
 
 ### 2. Cấu hình môi trường
