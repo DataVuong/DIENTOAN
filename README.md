@@ -78,7 +78,7 @@ lệnh : .\run.bat (trong terminal)
 
 ### 5. Ghi chú
 
-- MongoDB sẽ tự động khởi tạo và lưu dữ liệu trong volume docker.
+
 - Nếu muốn thay đổi kết nối MongoDB, sửa file `.env`.
 - Để dừng hệ thống: nhấn `Ctrl+C` trong terminal hoặc dùng `docker-compose down`.
 
