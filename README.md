@@ -20,7 +20,8 @@ Hệ thống Phân Tích Cảm Xúc Ẩm Thực là một ứng dụng web cho p
 
 - Docker & Docker Compose
 - Tài khoản Google để đăng nhập (qua Firebase)
-- File cấu hình `.env` (chứa thông tin kết nối MongoDB)
+- File cấu hình `.env` (chứa thông tin kết nối MongoDB) ( file đặt ở thư mục gốc)
+- File `fỉebase-auth.json` chứa thông tin để kết nối (Đăng nhập) (file đặt ở trong thư mục backend)
 
 ## Hướng dẫn cài đặt và chạy hệ thống
 
@@ -32,12 +33,18 @@ cd DIENTOAN
 ```
 
 ### 2. Cấu hình môi trường
+-Tạo file `.env`
 
 - Đảm bảo file `.env` đã có thông tin kết nối Mongo Atlas, ví dụ:
   ```
   MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
   ```
 
+ -Tạo file `fỉebase-auth.json`
+
+ -Đảm bảo file  `fỉebase-auth.json` đã có thông tin kết nối Fire Base.
+ 
+  
 ### 3. Chạy hệ thống
 
 - Sử dụng Docker Compose:
