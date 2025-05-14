@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản Lý Đánh Giá Ẩm Thực</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8ffae 0%, #43c6ac 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(255,255,255,0.97);
+      max-width: 900px;
+      margin: 40px auto 0 auto;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.2);
+      padding: 32px 32px 24px 32px;
+    }
+    .nav {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .nav button {
+      background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0 8px 12px 8px;
+      transition: background 0.3s;
+      display: inline-block;
+    }
+    .nav button:hover {
+      background: linear-gradient(90deg, #191654 0%, #43c6ac 100%);
+    }
+    h2 {
+      color: #43c6ac;
+      margin-bottom: 24px;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    #adminEmail {
+      color: #191654;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      display: block;
+      text-align: center;
+    }
+    button {
+      background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 8px 0;
+      transition: background 0.3s;
+      display: inline-block;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #191654 0%, #43c6ac 100%);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(67,198,172,0.08);
+    }
+    th, td {
+      padding: 14px 10px;
+      text-align: left;
+    }
+    th {
+      background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+      color: #fff;
+      font-weight: 600;
+      border-bottom: 2px solid #43c6ac;
+    }
+    tr:nth-child(even) {
+      background: #f2fdfb;
+    }
+    tr:hover {
+      background: #e0f7fa;
+      transition: background 0.2s;
+    }
+    #message {
+      color: #e53935;
+      text-align: center;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+    .delete-btn {
+      background: #e53935;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      margin: 0 2px;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover {
+      background: #b71c1c;
+    }
+    #deleteAllBtn, #deleteSelectedBtn {
+      background: #e53935;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-bottom: 16px;
+      margin-right: 8px;
+      transition: background 0.2s;
+      display: inline-block;
+    }
+    #deleteAllBtn:hover, #deleteSelectedBtn:hover {
+      background: #b71c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <button onclick="window.location.href='/'">Trang chủ</button>
+      <button onclick="window.location.href='/admin'">Quản lý đánh giá</button>
+      <button onclick="window.location.href='/stats'">Thống kê cảm xúc</button>
+    </div>
+    <h2>📋 Quản Lý Đánh Giá Ẩm Thực</h2>
+    <span id="adminEmail"></span>
+    <button id="loginBtn" onclick="loginWithGoogle()">Đăng nhập Google</button>
+    <button id="logoutBtn" onclick="logout()" style="display:none;">Đăng xuất</button>
+    <button id="deleteSelectedBtn" onclick="deleteSelectedReviews()" style="display:none;">Xóa các đánh giá đã chọn</button>
+    <button id="deleteAllBtn" onclick="deleteAllReviews()" style="display:none;">Xóa tất cả đánh giá</button>
+    <table id="reviewTable" style="display:none;">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+          <th>Email</th>
+          <th>Món ăn</th>
+          <th>Nội dung</th>
+          <th>Cảm xúc</th>
+          <th>Thời gian</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="message"></div>
+  </div>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDXbd55DJxke51WPOtGR4kTBowk1WydxuU",
+      authDomain: "sentiment-system-18601.firebaseapp.com",
+      projectId: "sentiment-system-18601",
+      appId: "1:1042399836905:web:3d5aa82aef28e3e3d88e78",
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    // Danh sách email admin
+    const ADMIN_EMAILS = [
+      "nguyentruongvuong7@gmail.com"
+    ];
+
+    let idToken = "";
+
+    function loginWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).then((result) => {
+        result.user.getIdToken().then((token) => {
+          idToken = token;
+          alert("Đăng nhập thành công!");
+          document.getElementById("adminEmail").innerText = result.user.email;
+        });
+      });
+    }
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        idToken = "";
+        document.getElementById("adminEmail").innerText = "";
+        document.getElementById("reviewTable").style.display = "none";
+        document.getElementById("deleteAllBtn").style.display = "none";
+        document.getElementById("deleteSelectedBtn").style.display = "none";
+        document.getElementById("message").innerText = "";
+      });
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      return d.toLocaleString();
+    }
+
+    function loadReviews() {
+      document.getElementById("tableBody").innerHTML = "";
+      document.getElementById("message").innerText = "";
+      fetch("/admin/reviews")
+        .then(res => res.json())
+        .then(data => {
+          // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
+          data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          const tbody = document.getElementById("tableBody");
+          if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById("message").innerText = "Chưa có đánh giá nào.";
+            document.getElementById("deleteAllBtn").style.display = "none";
+            document.getElementById("deleteSelectedBtn").style.display = "none";
+            return;
+          }
+          data.forEach(r => {
+            const row = `<tr>
+              <td><input type="checkbox" class="review-checkbox" value="${r._id}"></td>
+              <td>${r.email || ""}</td>
+              <td>${r.food || ""}</td>
+              <td>${r.text || ""}</td>
+              <td>${r.sentiment || ""}</td>
+              <td>${formatDate(r.created_at)}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+          });
+          document.getElementById("deleteAllBtn").style.display = "inline-block";
+          document.getElementById("deleteSelectedBtn").style.display = "inline-block";
+          document.getElementById("selectAll").checked = false;
+        })
+        .catch(() => {
+          document.getElementById("message").innerText = "Lỗi tải dữ liệu!";
+        });
+    }
+
+    function deleteSelectedReviews() {
+      const checked = Array.from(document.querySelectorAll('.review-checkbox:checked')).map(cb => cb.value);
+      if (checked.length === 0) {
+        alert("Vui lòng chọn ít nhất một đánh giá để xóa!");
+        return;
+      }
+      if (confirm("Bạn chắc chắn muốn xóa các đánh giá đã chọn?")) {
+        Promise.all(
+          checked.map(id =>
+            fetch(`/admin/review/${id}`, { method: "DELETE" })
+          )
+        ).then(() => loadReviews());
+      }
+    }
+
+    function deleteAllReviews() {
+      if (confirm("Bạn chắc chắn muốn xóa TẤT CẢ đánh giá?")) {
+        fetch(`/admin/reviews`, { method: "DELETE" })
+          .then(res => res.json())
+          .then(() => loadReviews());
+      }
+    }
+
+    function toggleSelectAll(source) {
+      const checkboxes = document.querySelectorAll('.review-checkbox');
+      checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+
+    // Kiểm tra trạng thái đăng nhập và quyền admin
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "inline-block";
+        document.getElementById("adminEmail").innerText = user.email;
+        user.getIdToken().then(token => { idToken = token; });
+        if (ADMIN_EMAILS.includes(user.email)) {
+          document.getElementById("reviewTable").style.display = "table";
+          loadReviews();
+          document.getElementById("message").innerText = "";
+        } else {
+          document.getElementById("reviewTable").style.display = "none";
+          document.getElementById("deleteAllBtn").style.display = "none";
+          document.getElementById("deleteSelectedBtn").style.display = "none";
+          document.getElementById("message").innerText = "Bạn không có quyền truy cập trang này!";
+        }
+      } else {
+        document.getElementById("loginBtn").style.display = "inline-block";
+        document.getElementById("logoutBtn").style.display = "none";
+        document.getElementById("adminEmail").innerText = "";
+        document.getElementById("reviewTable").style.display = "none";
+        document.getElementById("deleteAllBtn").style.display = "none";
+        document.getElementById("deleteSelectedBtn").style.display = "none";
+        document.getElementById("message").innerText = "Vui lòng đăng nhập bằng tài khoản admin!";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phân Tích Cảm Xúc Ẩm Thực</title>
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <style>
+      /* ...giữ nguyên style như cũ... */
+      body {
+        background: linear-gradient(135deg, #f8ffae 0%, #43c6ac 100%);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+      .container {
+        background: rgba(255,255,255,0.95);
+        max-width: 500px;
+        margin: 60px auto 0 auto;
+        border-radius: 18px;
+        box-shadow: 0 8px 32px 0 rgba(31,38,135,0.2);
+        padding: 32px 32px 24px 32px;
+        text-align: center;
+      }
+      .nav {
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      .nav button {
+        background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 20px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin: 0 8px 12px 8px;
+        transition: background 0.3s;
+      }
+      .nav button:hover {
+        background: linear-gradient(90deg, #191654 0%, #43c6ac 100%);
+      }
+      h2 {
+        color: #43c6ac;
+        margin-bottom: 18px;
+      }
+      button {
+        background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin: 8px 0;
+        transition: background 0.3s;
+      }
+      button:hover {
+        background: linear-gradient(90deg, #191654 0%, #43c6ac 100%);
+      }
+      textarea {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #43c6ac;
+        padding: 12px;
+        font-size: 1rem;
+        margin-bottom: 12px;
+        resize: vertical;
+        min-height: 80px;
+        box-sizing: border-box;
+      }
+      #result {
+        margin-top: 18px;
+        font-weight: bold;
+        color: #191654;
+        font-size: 1.1rem;
+        min-height: 24px;
+      }
+      #userEmail {
+        color: #191654;
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+        display: block;
+      }
+      #foodImage {
+        max-width: 100%;
+        border-radius: 12px;
+        margin: 12px 0;
+        display: none;
+      }
+      #foodSelect {
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #43c6ac;
+        font-size: 1rem;
+        margin-bottom: 8px;
+      }
+    </style>
+    <script>
+      // Thay các giá trị bên dưới bằng config của bạn từ Firebase Console
+      const firebaseConfig = {
+        apiKey: "AIzaSyDXbd55DJxke51WPOtGR4kTBowk1WydxuU",
+        authDomain: "sentiment-system-18601.firebaseapp.com",
+        projectId: "sentiment-system-18601",
+        appId: "1:1042399836905:web:3d5aa82aef28e3e3d88e78",
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      let idToken = "";
+
+      // Danh sách món ăn mẫu
+      const foods = [
+        { name: "Phở Bò", img: "/static/phobo.jpg" },
+        { name: "Bún Chả", img: "/static/buncha.jpg" },
+        { name: "Bánh Mì", img: "/static/banhmi.png" },
+        { name: "Gỏi Cuốn", img: "/static/goicuon.jpg" },
+        { name: "Cơm Tấm", img: "/static/comtam.jpg" }
+      ];
+
+      let reviewedFoods = {}; // Lưu trạng thái đã đánh giá trong session
+
+      function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).then((result) => {
+          result.user.getIdToken().then((token) => {
+            idToken = token;
+            alert("Đăng nhập thành công!");
+            document.getElementById("userEmail").innerText = result.user.email;
+            reviewedFoods = {}; // Reset khi đăng nhập mới
+          });
+        });
+      }
+
+      function logout() {
+        firebase.auth().signOut().then(() => {
+          idToken = "";
+          alert("Đã đăng xuất!");
+          document.getElementById("userEmail").innerText = "";
+          reviewedFoods = {}; // Reset khi đăng xuất
+        });
+      }
+
+      function showFoodImage() {
+        const idx = document.getElementById("foodSelect").value;
+        const img = document.getElementById("foodImage");
+        img.src = foods[idx].img;
+        img.style.display = "block";
+        img.alt = foods[idx].name;
+      }
+
+      function submitReview() {
+        const text = document.getElementById("reviewText").value;
+        const foodIdx = document.getElementById("foodSelect").value;
+        const foodName = foods[foodIdx].name;
+        if (!idToken) {
+          alert("Vui lòng đăng nhập trước khi gửi đánh giá!");
+          return;
+        }
+        if (reviewedFoods[foodName]) {
+          alert("Bạn chỉ được đánh giá mỗi món ăn một lần trong mỗi lần đăng nhập!");
+          return;
+        }
+        fetch("/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": idToken
+          },
+          body: JSON.stringify({ text, food: foodName })
+        })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("result").innerText = "Cảm xúc: " + (data.sentiment || data.error);
+          reviewedFoods[foodName] = true; // Đánh dấu đã đánh giá món này
+        });
+      }
+
+      // Hiển thị nút phù hợp theo trạng thái đăng nhập và khởi tạo dropdown món ăn
+      window.onload = function() {
+        firebase.auth().onAuthStateChanged(function(user) {
+          if (user) {
+            document.getElementById("loginBtn").style.display = "none";
+            document.getElementById("logoutBtn").style.display = "inline-block";
+            document.getElementById("userEmail").innerText = user.email;
+            user.getIdToken().then(token => { idToken = token; });
+          } else {
+            document.getElementById("loginBtn").style.display = "inline-block";
+            document.getElementById("logoutBtn").style.display = "none";
+            document.getElementById("userEmail").innerText = "";
+            idToken = "";
+            reviewedFoods = {};
+          }
+        });
+        // Khởi tạo dropdown món ăn
+        const select = document.getElementById("foodSelect");
+        select.innerHTML = "";
+        foods.forEach((food, idx) => {
+          const opt = document.createElement("option");
+          opt.value = idx;
+          opt.text = food.name;
+          select.appendChild(opt);
+        });
+        showFoodImage();
+      };
+    </script>
+</head>
+<body>
+    <div class="container">
+      <div class="nav">
+        <button onclick="window.location.href='/'">Trang chủ</button>
+        <button onclick="window.location.href='/admin'">Quản lý đánh giá</button>
+        <button onclick="window.location.href='/stats'">Thống kê cảm xúc</button>
+      </div>
+      <h2>🍲 Phân Tích Cảm Xúc Ẩm Thực 🍲</h2>
+      <span id="userEmail"></span>
+      <button id="loginBtn" onclick="loginWithGoogle()">Đăng nhập Google</button>
+      <button id="logoutBtn" onclick="logout()" style="display:none;">Đăng xuất</button>
+      <br>
+      <label for="foodSelect"><b>Chọn món ăn:</b></label>
+      <select id="foodSelect" onchange="showFoodImage()"></select>
+      <div>
+        <img id="foodImage" src="" alt="Hình món ăn">
+      </div>
+      <textarea id="reviewText" rows="5" placeholder="Nhập đánh giá của bạn về món ăn..."></textarea><br>
+      <button onclick="submitReview()">Gửi đánh giá</button>
+      <div id="result"></div>
+    </div>
+</body>
+</html>

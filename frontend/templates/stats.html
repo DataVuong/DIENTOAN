@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Phân bố cảm xúc theo món ăn</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8ffae 0%, #43c6ac 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(255,255,255,0.97);
+      max-width: 600px;
+      margin: 60px auto 0 auto;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.2);
+      padding: 32px 32px 24px 32px;
+      text-align: center;
+    }
+    .nav {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .nav button {
+      background: linear-gradient(90deg, #43c6ac 0%, #191654 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0 8px 12px 8px;
+      transition: background 0.3s;
+    }
+    .nav button:hover {
+      background: linear-gradient(90deg, #191654 0%, #43c6ac 100%);
+    }
+    h2 {
+      color: #43c6ac;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+    #sentimentChart, #totalSentimentChart {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(67,198,172,0.08);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    #noData, #noTotalData {
+      color: #e57373;
+      font-weight: bold;
+      margin-top: 18px;
+    }
+    #foodFilter {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #43c6ac;
+      font-size: 1rem;
+      margin-bottom: 18px;
+      margin-top: 8px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #43c6ac;
+      margin: 32px 0 24px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <button onclick="window.location.href='/'">Trang chủ</button>
+      <button onclick="window.location.href='/admin'">Quản lý đánh giá</button>
+      <button onclick="window.location.href='/stats'">Thống kê cảm xúc</button>
+    </div>
+    <h2>📊 Thống kê cảm xúc theo từng món ăn</h2>
+    <h3>📈 Tổng quan cảm xúc tất cả món ăn</h3>
+    <canvas id="totalSentimentChart" width="400" height="220"></canvas>
+    <div id="noTotalData" style="display:none;">Chưa có dữ liệu tổng!</div>
+    <hr>
+    <label for="foodFilter"><b>Chọn món ăn:</b></label>
+    <select id="foodFilter"></select>
+    <canvas id="sentimentChart" width="400" height="220"></canvas>
+    <div id="noData" style="display:none;">Chưa có dữ liệu thống kê!</div>
+  </div>
+  <script>
+    const SENTIMENT_TYPES = [
+      {label: "Tích cực", key: "positive", color: "#81c784"},
+      {label: "Trung tính", key: "neutral", color: "#f8ffae"},
+      {label: "Tiêu cực", key: "negative", color: "#e57373"}
+    ];
+
+    let allStats = [];
+    let foods = [];
+    let chart = null;
+    let totalChart = null;
+
+    // Biểu đồ tổng cảm xúc
+    fetch("/api/stats")
+      .then(res => res.json())
+      .then(data => {
+        const counts = SENTIMENT_TYPES.map(type => {
+          const found = data.find(item => item._id === type.key);
+          return found ? found.count : 0;
+        });
+        drawTotalChart(counts);
+      });
+
+    function drawTotalChart(counts) {
+      const labels = SENTIMENT_TYPES.map(type => type.label);
+      const colors = SENTIMENT_TYPES.map(type => type.color);
+
+      if (counts.every(c => c === 0)) {
+        document.getElementById("totalSentimentChart").style.display = "none";
+        document.getElementById("noTotalData").style.display = "block";
+        return;
+      } else {
+        document.getElementById("totalSentimentChart").style.display = "block";
+        document.getElementById("noTotalData").style.display = "none";
+      }
+
+      const ctx = document.getElementById("totalSentimentChart").getContext("2d");
+      if (totalChart) totalChart.destroy();
+      totalChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Tổng số lượng đánh giá',
+            data: counts,
+            backgroundColor: colors,
+            borderColor: "#191654",
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#191654", font: { weight: "bold" } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#e0f7fa" },
+              ticks: { color: "#191654" }
+            }
+          }
+        }
+      });
+    }
+
+    // Biểu đồ theo từng món ăn
+    fetch("/api/stats/food")
+      .then(res => res.json())
+      .then(data => {
+        allStats = data;
+        // Lấy danh sách món ăn duy nhất
+        foods = [...new Set(data.map(item => item._id.food))];
+        const foodFilter = document.getElementById("foodFilter");
+        foodFilter.innerHTML = "";
+        foods.forEach(food => {
+          const opt = document.createElement("option");
+          opt.value = food;
+          opt.text = food;
+          foodFilter.appendChild(opt);
+        });
+        foodFilter.onchange = drawChart;
+        drawChart();
+      });
+
+    function drawChart() {
+      const selectedFood = document.getElementById("foodFilter").value;
+      const stats = allStats.filter(item => item._id.food === selectedFood);
+      const counts = SENTIMENT_TYPES.map(type => {
+        const found = stats.find(item => item._id.sentiment === type.key);
+        return found ? found.count : 0;
+      });
+      const labels = SENTIMENT_TYPES.map(type => type.label);
+      const colors = SENTIMENT_TYPES.map(type => type.color);
+
+      if (counts.every(c => c === 0)) {
+        document.getElementById("sentimentChart").style.display = "none";
+        document.getElementById("noData").style.display = "block";
+        return;
+      } else {
+        document.getElementById("sentimentChart").style.display = "block";
+        document.getElementById("noData").style.display = "none";
+      }
+
+      const ctx = document.getElementById("sentimentChart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Số lượng đánh giá',
+            data: counts,
+            backgroundColor: colors,
+            borderColor: "#191654",
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            title: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: "#43c6ac",
+              titleColor: "#fff",
+              bodyColor: "#fff"
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: "#191654",
+                font: { weight: "bold" }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "#e0f7fa"
+              },
+              ticks: {
+                color: "#191654"
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
