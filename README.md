@@ -55,9 +55,9 @@ cd DIENTOAN
 lệnh : .\run.bat (trong terminal)
 ### 4. Truy cập giao diện
 
-- Trang người dùng: http://localhost:5000
-- Quản lý đánh giá (admin): http://localhost:5000/admin
-- Thống kê cảm xúc: http://localhost:5000/stats
+- Trang người dùng: http://127.0.0.1:5000
+- Quản lý đánh giá (admin): http://127.0.0.1:5000/admin
+- Thống kê cảm xúc: http://127.0.0.1:5000/stats
 
 - Hoặc có thể truy cập giao diện trực tiếp trên web
 ### 5. Đăng nhập
