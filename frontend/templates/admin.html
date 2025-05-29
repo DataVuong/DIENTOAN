@@ -130,6 +130,19 @@
     #deleteAllBtn:hover, #deleteSelectedBtn:hover {
       background: #b71c1c;
     }
+    .filter-bar {
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .filter-bar input, .filter-bar select {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #43c6ac;
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -143,6 +156,20 @@
     <span id="adminEmail"></span>
     <button id="loginBtn" onclick="loginWithGoogle()">Đăng nhập Google</button>
     <button id="logoutBtn" onclick="logout()" style="display:none;">Đăng xuất</button>
+    <div class="filter-bar">
+      <input id="filterFood" placeholder="Lọc theo món ăn...">
+      <input id="filterText" placeholder="Lọc theo nội dung...">
+      <select id="filterSentiment">
+        <option value="">Tất cả cảm xúc</option>
+        <option value="positive">Tích cực</option>
+        <option value="negative">Tiêu cực</option>
+        <option value="neutral">Trung tính</option>
+      </select>
+      <input id="filterFrom" type="date">
+      <input id="filterTo" type="date">
+      <button onclick="applyFilters()">Lọc</button>
+      <button onclick="resetFilters()">Xóa lọc</button>
+    </div>
     <button id="deleteSelectedBtn" onclick="deleteSelectedReviews()" style="display:none;">Xóa các đánh giá đã chọn</button>
     <button id="deleteAllBtn" onclick="deleteAllReviews()" style="display:none;">Xóa tất cả đánh giá</button>
     <table id="reviewTable" style="display:none;">
@@ -176,6 +203,7 @@
     ];
 
     let idToken = "";
+    let allReviews = [];
 
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
@@ -211,33 +239,64 @@
       fetch("/admin/reviews")
         .then(res => res.json())
         .then(data => {
-          // Sắp xếp theo thời gian giảm dần (mới nhất lên đầu)
           data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-          const tbody = document.getElementById("tableBody");
-          if (!Array.isArray(data) || data.length === 0) {
-            document.getElementById("message").innerText = "Chưa có đánh giá nào.";
-            document.getElementById("deleteAllBtn").style.display = "none";
-            document.getElementById("deleteSelectedBtn").style.display = "none";
-            return;
-          }
-          data.forEach(r => {
-            const row = `<tr>
-              <td><input type="checkbox" class="review-checkbox" value="${r._id}"></td>
-              <td>${r.email || ""}</td>
-              <td>${r.food || ""}</td>
-              <td>${r.text || ""}</td>
-              <td>${r.sentiment || ""}</td>
-              <td>${formatDate(r.created_at)}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-          });
-          document.getElementById("deleteAllBtn").style.display = "inline-block";
-          document.getElementById("deleteSelectedBtn").style.display = "inline-block";
-          document.getElementById("selectAll").checked = false;
+          allReviews = data;
+          renderReviews(data);
         })
         .catch(() => {
           document.getElementById("message").innerText = "Lỗi tải dữ liệu!";
         });
+    }
+
+    function renderReviews(data) {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      if (!Array.isArray(data) || data.length === 0) {
+        document.getElementById("message").innerText = "Không có đánh giá phù hợp.";
+        document.getElementById("deleteAllBtn").style.display = "none";
+        document.getElementById("deleteSelectedBtn").style.display = "none";
+        return;
+      }
+      data.forEach(r => {
+        const row = `<tr>
+          <td><input type="checkbox" class="review-checkbox" value="${r._id}"></td>
+          <td>${r.email || ""}</td>
+          <td>${r.food || ""}</td>
+          <td>${r.text || ""}</td>
+          <td>${r.sentiment || ""}</td>
+          <td>${formatDate(r.created_at)}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+      document.getElementById("deleteAllBtn").style.display = "inline-block";
+      document.getElementById("deleteSelectedBtn").style.display = "inline-block";
+      document.getElementById("selectAll").checked = false;
+    }
+
+    function applyFilters() {
+      let filtered = allReviews;
+      const food = document.getElementById("filterFood").value.trim().toLowerCase();
+      const text = document.getElementById("filterText").value.trim().toLowerCase();
+      const sentiment = document.getElementById("filterSentiment").value;
+      const from = document.getElementById("filterFrom").value;
+      const to = document.getElementById("filterTo").value;
+
+      if (food) filtered = filtered.filter(r => (r.food || "").toLowerCase().includes(food));
+      if (text) filtered = filtered.filter(r => (r.text || "").toLowerCase().includes(text));
+      if (sentiment) filtered = filtered.filter(r => r.sentiment === sentiment);
+      if (from) filtered = filtered.filter(r => r.created_at && new Date(r.created_at) >= new Date(from));
+      if (to) filtered = filtered.filter(r => r.created_at && new Date(r.created_at) <= new Date(to + "T23:59:59"));
+
+      renderReviews(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById("filterFood").value = "";
+      document.getElementById("filterText").value = "";
+      document.getElementById("filterSentiment").value = "";
+      document.getElementById("filterFrom").value = "";
+      document.getElementById("filterTo").value = "";
+      renderReviews(allReviews);
     }
 
     function deleteSelectedReviews() {
