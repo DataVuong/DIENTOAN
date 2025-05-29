@@ -6,3 +6,4 @@ dnspython
 python-dotenv
 nltk
 textblob
+googletrans==4.0.0-rc1
