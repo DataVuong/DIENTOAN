@@ -146,7 +146,7 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="adminContainer">
     <div class="nav">
       <button onclick="window.location.href='/'">Trang chủ</button>
       <button onclick="window.location.href='/admin'">Quản lý đánh giá</button>
@@ -199,7 +199,8 @@
 
     // Danh sách email admin
     const ADMIN_EMAILS = [
-      "nguyentruongvuong7@gmail.com"
+      "nguyentruongvuong7@gmail.com",
+      "tronglehuu912@gmail.com"
     ];
 
     let idToken = "";
@@ -336,13 +337,14 @@
         user.getIdToken().then(token => { idToken = token; });
         if (ADMIN_EMAILS.includes(user.email)) {
           document.getElementById("reviewTable").style.display = "table";
+          document.querySelector(".filter-bar").style.display = "flex";
+          document.getElementById("deleteAllBtn").style.display = "inline-block";
+          document.getElementById("deleteSelectedBtn").style.display = "inline-block";
           loadReviews();
           document.getElementById("message").innerText = "";
         } else {
-          document.getElementById("reviewTable").style.display = "none";
-          document.getElementById("deleteAllBtn").style.display = "none";
-          document.getElementById("deleteSelectedBtn").style.display = "none";
-          document.getElementById("message").innerText = "Bạn không có quyền truy cập trang này!";
+          alert("Bạn không có quyền truy cập trang này!");
+          window.location.href = "/";
         }
       } else {
         document.getElementById("loginBtn").style.display = "inline-block";
@@ -352,6 +354,7 @@
         document.getElementById("deleteAllBtn").style.display = "none";
         document.getElementById("deleteSelectedBtn").style.display = "none";
         document.getElementById("message").innerText = "Vui lòng đăng nhập bằng tài khoản admin!";
+        document.querySelector(".filter-bar").style.display = "none";
       }
     });
   </script>
